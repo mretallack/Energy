@@ -3,6 +3,7 @@ import os
 import sys
 import asyncio
 import aiohttp
+import datetime
 import pysmartthings
 
 import paho.mqtt.client as mqtt
@@ -22,6 +23,10 @@ gauge_gas = None
 lastReadingElec = None
 lastReadingGas = None
 measurementPeriod = 1
+startOfDayElect = None
+currentDayElect = None
+startOfDayGas = None
+currentDayGas = None
 
 async def get_device(api):
     for device in await api.devices():
@@ -45,6 +50,7 @@ def valid_reading(reading, previous_reading):
 
 async def main(api_token):
     global gauge_electricity, gauge_gas, lastReadingElec,lastReadingGas
+    global startOfDayElect, startOfDayGas, currentDayElect, currentDayGas
 
     async with aiohttp.ClientSession() as session:
         api = pysmartthings.SmartThings(session, api_token)
@@ -79,8 +85,16 @@ async def main(api_token):
             if electricity_reading:
                 #print("electricity_reading: " + str(electricity_reading))
                 
-                
-                client.publish("energy/electricity_daily", electricity_reading)
+                # if we are a new day, then reset the daily
+                curDay = datetime.datetime.now().date().day
+                if curDay != currentDayElect:
+                    startOfDayElect = electricity_reading
+                    currentDayElect = curDay
+
+                # calculate the daily usage
+                daily_reading = electricity_reading - startOfDayElect
+                	
+                client.publish("energy/electricity_daily", round(daily_reading,2))
                 
                 if lastReadingElec != None:
                 
@@ -96,7 +110,17 @@ async def main(api_token):
             if gas_reading:
                 #print("gas_reading: "+str(gas_reading))
 
-                client.publish("energy/gas_daily", gas_reading)
+                # if we are a new day, then reset the daily
+                curDay = datetime.datetime.now().date().day
+                if curDay != currentDayGas:
+                    startOfDayGas = gas_reading
+                    currentDayGas = curDay
+
+                # calculate the daily usage
+                daily_reading = gas_reading - startOfDayGas
+                
+
+                client.publish("energy/gas_daily", round(daily_reading, 2))
                 
                 if lastReadingGas != None:
                 
