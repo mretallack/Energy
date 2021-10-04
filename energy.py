@@ -4,6 +4,7 @@ import sys
 import asyncio
 import aiohttp
 import datetime
+import yaml
 import pysmartthings
 
 import paho.mqtt.client as mqtt
@@ -27,6 +28,22 @@ startOfDayElect = None
 currentDayElect = None
 startOfDayGas = None
 currentDayGas = None
+
+saveFile=os.path.expanduser('~')+'/.energy.yaml'
+
+if os.path.isfile(saveFile):
+
+	with open(saveFile) as file:
+		documents = yaml.full_load(file)
+		
+		lastReadingElec = documents["lastReadingElec"]
+		lastReadingGas = documents["lastReadingGas"]
+		measurementPeriod = documents["measurementPeriod"]
+		startOfDayElect = documents["startOfDayElect"]
+		currentDayElect = documents["currentDayElect"]
+		startOfDayGas = documents["startOfDayGas"]
+		currentDayGas = documents["currentDayGas"]
+
 
 async def get_device(api):
     for device in await api.devices():
@@ -130,6 +147,18 @@ async def main(api_token):
                 
                 lastReadingGas = gas_reading
                 
+            dict_file={}
+            dict_file["lastReadingElec"] = lastReadingElec
+            dict_file["lastReadingGas"] = lastReadingGas
+            dict_file["measurementPeriod"] = measurementPeriod
+            dict_file["startOfDayElect"] = startOfDayElect
+            dict_file["currentDayElect"] = currentDayElect
+            dict_file["startOfDayGas"] = startOfDayGas
+            dict_file["currentDayGas"] = currentDayGas
+
+            with open(saveFile, 'w') as file:
+                documents = yaml.dump(dict_file, file)
+
             await asyncio.sleep(measurementPeriod*60)
 
 
